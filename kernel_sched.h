@@ -271,6 +271,8 @@ void initialize_scheduler(void);
 
 void setPriority(enum SCHED_CAUSE cause); //1996
 
+void boost_priorities(); //1996
+
 
 /**
   @brief Quantum (in microseconds) 

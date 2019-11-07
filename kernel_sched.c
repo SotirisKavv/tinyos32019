@@ -44,6 +44,7 @@
  */
 volatile unsigned int active_threads = 0;
 Mutex active_threads_spinlock = MUTEX_INIT;
+volatile unsigned int yield_calls = 0;	//1996//
 
 /* This is specific to Intel Pentium! */
 #define SYSTEM_PAGE_SIZE (1 << 12)
@@ -384,6 +385,7 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 
 void yield(enum SCHED_CAUSE cause)
 {
+	yield_calls++;
 	/* Reset the timer, so that we are not interrupted by ALARM */
 	TimerDuration remaining = bios_cancel_timer();
 
@@ -411,6 +413,11 @@ void yield(enum SCHED_CAUSE cause)
 	//1996
 	setPriority(cause);
 
+	if (yield_calls>=4) {
+		boost_priorities();
+		yield_calls = 0;
+	}
+
 	TCB* next = sched_queue_select();
 	if(next==NULL) {
       		next = & CURCORE.idle_thread;
@@ -433,7 +440,10 @@ void yield(enum SCHED_CAUSE cause)
 	gain(preempt);
 }
 
-//1996
+/*	================Our Fucntion=================== 1996.1
+	This funtion is called to set the thread_list the 
+	appropriate priority level based on its interrupt cause
+*/
 void setPriority(enum SCHED_CAUSE cause)
 {
 
@@ -442,6 +452,35 @@ void setPriority(enum SCHED_CAUSE cause)
 
 	if(cause == SCHED_QUANTUM && CURTHREAD->priority<5)		
 		CURTHREAD->priority++;
+}
+
+
+/*	================Our Fucntion=================== 1996.2
+	This funtion is called to set the thread_list the 
+	appropriate priority level based on its interrupt cause
+*/
+void invert_priorities(enum SCHED_CAUSE cause)
+{
+
+}
+
+/*	================Our Fucntion=================== 1996.3
+	This funtion is called to boost all thread_lists 
+	priorities after 4 scheduling decisions
+*/
+void boost_priorities()
+{
+	rlnode* tmp;
+
+	int i = 1;
+	while (i < levels){
+		while(!is_rlist_empty(schedArray[i])){
+			tmp = rlist_pop_front(schedArray[i]);
+      		tmp->tcb->priority -= 1;
+      		rlist_push_back(schedArray[i-1],tmp);
+		}
+		i++;
+	}
 }
 
 /*
