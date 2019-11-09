@@ -187,7 +187,7 @@ CCB cctx[MAX_CORES];
   Both of these structures are protected by @c sched_spinlock.
 */
 
-#define levels 6      /*1996*/
+#define levels 10      /*1996*/
 
 rlnode *schedArray[levels]; /* The scheduler queue */
 rlnode SCHED0;
@@ -196,6 +196,10 @@ rlnode SCHED2;
 rlnode SCHED3;
 rlnode SCHED4;
 rlnode SCHED5;
+rlnode SCHED6;
+rlnode SCHED7;
+rlnode SCHED8;
+rlnode SCHED9;
 
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
@@ -413,7 +417,7 @@ void yield(enum SCHED_CAUSE cause)
 	//1996
 	setPriority(cause);
 
-	if (yield_calls>=4) {
+	if (yield_calls>=50) {
 		boost_priorities();
 		yield_calls = 0;
 	}
@@ -563,6 +567,10 @@ void initialize_scheduler()
 	rlnode_init(&SCHED3, NULL);
 	rlnode_init(&SCHED4, NULL);
 	rlnode_init(&SCHED5, NULL);
+	rlnode_init(&SCHED6, NULL);
+	rlnode_init(&SCHED7, NULL);
+	rlnode_init(&SCHED8, NULL);
+	rlnode_init(&SCHED9, NULL);
 
 	schedArray[0] = &SCHED0; 
 	schedArray[1] = &SCHED1; 
@@ -570,6 +578,10 @@ void initialize_scheduler()
 	schedArray[3] = &SCHED3; 
 	schedArray[4] = &SCHED4; 
 	schedArray[5] = &SCHED5;
+	schedArray[6] = &SCHED5;
+	schedArray[7] = &SCHED5;
+	schedArray[8] = &SCHED5;
+	schedArray[9] = &SCHED5;
 
 	/*for(int i=0; i<levels; i++){
 
