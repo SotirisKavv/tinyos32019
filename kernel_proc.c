@@ -39,14 +39,13 @@ static inline void initialize_PCB(PCB* pcb)
   for(int i=0;i<MAX_FILEID;i++)
     pcb->FIDT[i] = NULL;
 
-  rlnode_init(& pcb->ptcb_list, NULL);
   rlnode_init(& pcb->children_list, NULL);
   rlnode_init(& pcb->exited_list, NULL);
   rlnode_init(& pcb->children_node, pcb);
   rlnode_init(& pcb->exited_node, pcb);
   pcb->child_exit = COND_INIT;
 
-  rlnode_init(& pcb->ptcb_list, NULL);
+  rlnode_init(& pcb->ptcb_list, NULL);    //1996//
 }
 
 
@@ -75,21 +74,22 @@ void initialize_processes()
     FATAL("The scheduler process does not have pid==0");
 }
 
-//To Delete
-/** initialize_(PCB *pcb, Task task)
+//1996//
+PTCB* initialize_ptcb(PCB *pcb, Task task)
 {
- B*  = (*)malloc(sizeof());
-  assert();
+ PTCB* ptcb = (PTCB*)malloc(sizeof(PTCB));
+  assert(ptcb);
 
-  ->task = task;
-  ->ref_count = 0;
-  ->exited = 0;
-  ->detached = 0;
-  ->tid = 1;
-  ->exit_cv = COND_INIT;
+  ptcb->pcb = pcb;
+  ptcb->task = task;
+  ptcb->ref_count = 0;
+  ptcb->exited = 0;
+  ptcb->detached = 0;
+  ptcb->tid = 1;
+  ptcb->exit_cv = COND_INIT;
 
-  return ;
-}*/
+  return ptcb;
+}
 
 
 /*
@@ -134,8 +134,8 @@ void release_PCB(PCB* pcb)
 void start_main_thread()
 {
 
-  PTCB* ptcb=CURTHREAD->owner_ptcb;
-  assert(ptcb!=NULL);
+  PTCB* ptcb = CURTHREAD->owner_ptcb;
+  assert(ptcb != NULL);
   int exitval;
 
   Task call =  ptcb->task;
@@ -204,15 +204,8 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     We changed the code so that the threads initialize through the ptcb 
   */
   //1996//
-  PTCB* ptcb = (PTCB*)malloc(sizeof(PTCB));
+  PTCB* ptcb = initialize_ptcb(newproc, call);
   assert(ptcb);
-
-  ptcb->task = call;
-  ptcb->ref_count = 0;
-  ptcb->exited = 0;
-  ptcb->detached = 0;
-  ptcb->tid = 1;
-  ptcb->exit_cv = COND_INIT;
 
   ptcb->argl = argl;
   if(args!=NULL) {
