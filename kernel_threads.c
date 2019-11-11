@@ -27,7 +27,7 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
 {
   PCB* pcb = CURPROC;
 
-  PTCB* ptcb = (PTCB*)malloc(sizeof(PTCB));     //intialization of ptcb
+  PTCB* ptcb = (PTCB*)malloc(sizeof(PTCB));     //initialization of ptcb
   assert(ptcb);
 
   ptcb->pcb = pcb;
