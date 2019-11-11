@@ -39,11 +39,14 @@ static inline void initialize_PCB(PCB* pcb)
   for(int i=0;i<MAX_FILEID;i++)
     pcb->FIDT[i] = NULL;
 
+  rlnode_init(& pcb->ptcb_list, NULL);
   rlnode_init(& pcb->children_list, NULL);
   rlnode_init(& pcb->exited_list, NULL);
   rlnode_init(& pcb->children_node, pcb);
   rlnode_init(& pcb->exited_node, pcb);
   pcb->child_exit = COND_INIT;
+
+  rlnode_init(& pcb->ptcb_list, NULL);
 }
 
 
@@ -71,6 +74,22 @@ void initialize_processes()
   if(Exec(NULL,0,NULL)!=0)
     FATAL("The scheduler process does not have pid==0");
 }
+
+//To Delete
+/** initialize_(PCB *pcb, Task task)
+{
+ B*  = (*)malloc(sizeof());
+  assert();
+
+  ->task = task;
+  ->ref_count = 0;
+  ->exited = 0;
+  ->detached = 0;
+  ->tid = 1;
+  ->exit_cv = COND_INIT;
+
+  return ;
+}*/
 
 
 /*
@@ -114,11 +133,14 @@ void release_PCB(PCB* pcb)
 */
 void start_main_thread()
 {
+
+  PTCB* ptcb=CURTHREAD->owner_ptcb;
+  assert(ptcb!=NULL);
   int exitval;
 
-  Task call =  CURPROC->main_task;
-  int argl = CURPROC->argl;
-  void* args = CURPROC->args;
+  Task call =  ptcb->task;
+  int argl = ptcb->argl;
+  void* args = ptcb->args;
 
   exitval = call(argl,args);
   Exit(exitval);
@@ -177,9 +199,34 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     we do, because once we wakeup the new thread it may run! so we need to have finished
     the initialization of the PCB.
    */
+
+  /* 
+    We changed the code so that the threads initialize through the ptcb 
+  */
+  //1996//
+  PTCB* ptcb = (PTCB*)malloc(sizeof(PTCB));
+  assert(ptcb);
+
+  ptcb->task = call;
+  ptcb->ref_count = 0;
+  ptcb->exited = 0;
+  ptcb->detached = 0;
+  ptcb->tid = 1;
+  ptcb->exit_cv = COND_INIT;
+
+  ptcb->argl = argl;
+  if(args!=NULL) {
+    ptcb->args = malloc(argl);
+    memcpy(ptcb->args, args, argl);
+  }
+  else
+    ptcb->args=NULL;
+
+  rlist_push_back(&(newproc->ptcb_list), rlnode_init(&(ptcb->thread_list_node), ptcb));
+
   if(call != NULL) {
-    newproc->main_thread = spawn_thread(newproc, start_main_thread);
-    wakeup(newproc->main_thread);
+    ptcb->tcb = spawn_thread(newproc, ptcb, start_main_thread);
+    wakeup(ptcb->tcb);
   }
 
 

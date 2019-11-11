@@ -99,7 +99,7 @@ enum SCHED_CAUSE {
 */
 typedef struct thread_control_block {
 	PCB* owner_pcb; /**< @brief This is null for a free TCB */
-
+  PTCB* owner_ptcb; /* The Thread's PTCB */
 	cpu_context_t context; /**< @brief The thread context */
 
 #ifndef NVALGRIND
@@ -125,7 +125,8 @@ typedef struct thread_control_block {
 	TimerDuration its; /**< @brief Initial time-slice for this thread */
 	TimerDuration rts; /**< @brief Remaining time-slice for this thread */
 
-  int priority; /* 1996 */
+  //1996//
+  int priority; /* The thread's priority level for the scheduling */ 
 	enum SCHED_CAUSE curr_cause; /**< @brief The endcause for the current time-slice */
 	enum SCHED_CAUSE last_cause; /**< @brief The endcause for the last time-slice */
 
@@ -194,11 +195,12 @@ extern CCB cctx[MAX_CORES];
     @param pcb  The process control block of the owning process. The
                 scheduler simply stores this value in the new TCB, and
                 otherwise ignores it
+    @param ptcb The process-thread control block of the owning process.
 
     @param func The function to execute in the new thread.
     @returns  A pointer to the TCB of the new thread, in the @c INIT state.
 */
-TCB* spawn_thread(PCB* pcb, void (*func)());
+TCB* spawn_thread(PCB* pcb, PTCB* ptcb, void (*func)());
 
 /**
   @brief Wakeup a blocked thread.
@@ -269,9 +271,23 @@ void run_scheduler(void);
  */
 void initialize_scheduler(void);
 
-void setPriority(enum SCHED_CAUSE cause); //1996
+//1996//
+/**
+  @brief Sets the thread's priority based on the last interrupt cause.
 
-void boost_priorities(); //1996
+   This function is called during yielding.
+ */
+void setPriority(enum SCHED_CAUSE cause); 
+
+//1996//
+/**
+  @brief Increases the priority levels of the threads on the scheduler
+  by 1.
+
+   This function is called during yielding if the function "yieled" has
+   been called 50 times or more.
+ */
+void boost_priorities();
 
 
 /**

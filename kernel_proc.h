@@ -52,6 +52,11 @@ typedef struct process_control_block {
   rlnode children_node;   /**< @brief Intrusive node for @c children_list */
   rlnode exited_node;     /**< @brief Intrusive node for @c exited_list */
 
+  rlnode thread_list;     /**< @brief List of threads */
+  uint thread_count;      /**< @brief Number of threads */
+
+  rlnode ptcb_list;       /**< @brief List of PTCBs */
+
   CondVar child_exit;     /**< @brief Condition variable for @c WaitChild. 
 
                              This condition variable is  broadcast each time a child
@@ -61,6 +66,28 @@ typedef struct process_control_block {
   FCB* FIDT[MAX_FILEID];  /**< @brief The fileid table of the process */
 
 } PCB;
+
+//1996//
+typedef struct process_thread_control_block{
+
+  PCB* pcb;                   /* The owner pcb of ptcb's thread */
+  uint ref_count;             /* How many threads access the ptcb */
+  TCB* tcb;                   /* The TCB of the thread */
+  Tid_t tid;                  /* The thread's id */
+
+  rlnode thread_list_node;    /* The PTCB node */
+  Task task;                  /* The task the thread is going to exec */
+  int argl;
+  void* args;
+
+  int exitval;                /* The thread's exit value */
+
+  int exited;                 /* 1 if thread is finished, otherwise 0 */
+  int detached;               /* 1 if thraed is detched, otherwise 0 */
+
+  CondVar exit_cv;            /* CondVar to access the PTCB */
+
+} PTCB;
 
 
 /**
@@ -94,6 +121,8 @@ PCB* get_pcb(Pid_t pid);
   @returns the PID of the process, or NOPROC.
 */
 Pid_t get_pid(PCB* pcb);
+
+PTCB* initialize_ptcb();
 
 /** @} */
 
