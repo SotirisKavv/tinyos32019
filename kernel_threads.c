@@ -2,6 +2,7 @@
 #include "tinyos.h"
 #include "kernel_sched.h"
 #include "kernel_proc.h"
+#include "kernel_cc.h"
 
 //1996//
 static uint cur_tid = 2; //tid=1 has only the main thread
@@ -67,11 +68,21 @@ Tid_t sys_ThreadSelf()
   */
 int sys_ThreadJoin(Tid_t tid, int* exitval)
 {
-  //if ()
 
+  if (sys_ThreadSelf() == tid)  return -1;
 
+  PTCB* ptcb = CURTHREAD->owner_ptcb;
 
-	return -1;
+  if (ptcb == NULL || ptcb->detached == 1) return -1;
+
+  ptcb->ref_count++;
+  while(ptcb->exited != 1 && ptcb->detached != 1)
+    kernel_wait(& ptcb->exit_cv, SCHED_USER);
+
+  *exitval = ptcb->exitval;
+  ptcb->ref_count--;
+
+	return 0;
 }
 
 /**
@@ -79,7 +90,14 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   */
 int sys_ThreadDetach(Tid_t tid)
 {
-	return -1;
+  PTCB* ptcb = (PTCB*) tid;
+
+  if (ptcb == NULL || ptcb->exited == 1) return -1;
+
+  ptcb->detached = 1;
+  kernel_broadcast(& ptcb->exit_cv);
+
+  return 0;
 }
 
 /**
@@ -87,5 +105,17 @@ int sys_ThreadDetach(Tid_t tid)
   */
 void sys_ThreadExit(int exitval)
 {
+  PTCB* ptcb = CURTHREAD->owner_ptcb;
 
+  ptcb->exited = 1;
+  ptcb->exitval = exitval;
+
+  kernel_broadcast(& ptcb->exit_cv);
+
+  if (ptcb->ref_count <= 0){
+    rlist_remove(& ptcb->thread_list_node);
+    free(ptcb);
+  }
+
+  kernel_sleep(EXITED, SCHED_USER);
 }
