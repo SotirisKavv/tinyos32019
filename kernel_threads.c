@@ -13,9 +13,9 @@ static uint cur_tid = 2; //tid=1 has only the main thread
 void start_thread()
 {
   int exitval;
-  PTCB* myptcb = CURTHREAD->owner_ptcb;
-  Task call =  myptcb->task;
-  exitval = call(myptcb->argl, myptcb->args);
+  PTCB* ptcb = CURTHREAD->owner_ptcb;
+  Task call =  ptcb->task;
+  exitval = call(ptcb->argl, ptcb->args);
 
   ThreadExit(exitval);
 }
@@ -35,14 +35,12 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
   ptcb->ref_count = 0;
   ptcb->exited = 0;
   ptcb->detached = 0;
+  ptcb->exitval = 0;
   ptcb->tid = cur_tid++;
   ptcb->exit_cv = COND_INIT;
 
   ptcb->argl = argl;
-  if (args != NULL){
-    ptcb->args = malloc(argl);
-    memcpy(args, ptcb->args, argl);
-  } else ptcb->args = NULL;
+  ptcb->args = args;
 
   //thread spawn and linking
   TCB* tcb = spawn_thread(pcb, ptcb, start_thread);
@@ -50,9 +48,11 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
 
   rlist_push_back(& pcb->ptcb_list, rlnode_init(& ptcb->thread_list_node, ptcb));
 
+
+  assert(ptcb!=NULL);
   wakeup(tcb);
 
-	return (Tid_t) ptcb->tid;
+	return (Tid_t) ptcb;
 }
 
 /**
@@ -90,7 +90,7 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   */
 int sys_ThreadDetach(Tid_t tid)
 {
-  PTCB* ptcb = (PTCB*) tid;
+  PTCB* ptcb = CURTHREAD->owner_ptcb;
 
   if (ptcb == NULL || ptcb->exited == 1) return -1;
 
@@ -115,7 +115,7 @@ void sys_ThreadExit(int exitval)
   if (ptcb->ref_count <= 0){
     rlist_remove(& ptcb->thread_list_node);
     free(ptcb);
+    //sys_Exit(exitval);
   }
-
-  kernel_sleep(EXITED, SCHED_USER);
+  else kernel_sleep(EXITED, SCHED_USER);
 }

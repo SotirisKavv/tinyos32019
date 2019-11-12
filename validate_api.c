@@ -979,12 +979,6 @@ TEST_SUITE(thread_tests,
 	NULL
 };
 
-
-
-
-
-
-
 /*********************************************
  *
  *
@@ -2135,12 +2129,69 @@ BARE_TEST(dummy_user_test,
 	ASSERT(1+1==2);
 }
 
+//MY TESTS
+
+
+
+BOOT_TEST(test_create,
+	"Test that a process thread can be created"
+	)
+{
+	int flag = 0;
+
+
+	int task(int argl, void* args) {
+		ASSERT(args == &flag);
+		*(int*)args = 1;
+		return 2;
+	}
+
+	Tid_t t = CreateThread(task, sizeof(flag), &flag);
+
+	ASSERT(t!=NOTHREAD);
+
+	int exitval;
+	ASSERT(ThreadJoin(t, &exitval)==0);
+	ASSERT(flag==1);
+
+	return 0;
+}
+
+/* We declare this function globaly so as to be visible 
+even when the test function has end*/
+
+int flag = 0;
+int task(int argl, void* args) {
+		*(int*)args = 1;
+		return 2;
+	}
+
+BOOT_TEST(test_detach,
+	"Test that a process thread can be created"
+	)
+{
+
+	Tid_t t = CreateThread(task, sizeof(flag), &flag);
+
+	ASSERT(ThreadDetach(t) == 0);
+
+
+	ASSERT(t!=NOTHREAD);
+	int exitval;
+	ASSERT(ThreadJoin(t, &exitval)==-1);
+	//ASSERT(flag==1);
+
+	return 0;
+}
+
 
 TEST_SUITE(user_tests, 
 	"These are tests defined by the user."
 	)
 {
 	&dummy_user_test,
+	&test_create,
+	&test_detach,
 	NULL
 };
 
