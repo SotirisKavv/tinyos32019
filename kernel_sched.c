@@ -416,7 +416,10 @@ void yield(enum SCHED_CAUSE cause)
 
 	TCB* next = sched_queue_select();
 	if(next==NULL) {
+		if(CURTHREAD->state != READY)
       		next = & CURCORE.idle_thread;
+      	else
+      		next = current;
   }
 
 	/* Save the current TCB for the gain phase */
@@ -442,22 +445,23 @@ void yield(enum SCHED_CAUSE cause)
 */
 void setPriority(enum SCHED_CAUSE cause)
 {
-
-	if(cause == SCHED_IO && CURTHREAD->priority>0)
-		CURTHREAD->priority--;
-
-	if(cause == SCHED_QUANTUM && CURTHREAD->priority<5)		
-		CURTHREAD->priority++;
-}
-
-
-/*	================Our Fucntion=================== 1996.2
-	This funtion is called to set the thread_list the 
-	appropriate priority level based on its interrupt cause
-*/
-void invert_priorities(enum SCHED_CAUSE cause)
-{
-
+	switch(cause){
+		case SCHED_IO:
+		case SCHED_MUTEX:
+			if(CURTHREAD->priority > 0 && CURTHREAD != & CURCORE.idle_thread && CURTHREAD->state != READY)
+				CURTHREAD->priority--;
+			break;
+		case SCHED_QUANTUM:
+			if(CURTHREAD->priority > 0 && CURTHREAD != & CURCORE.idle_thread && CURTHREAD->state != READY)
+				CURTHREAD->priority++;
+			break;
+		case SCHED_PIPE:
+		case SCHED_POLL:
+		case SCHED_IDLE:
+		case SCHED_USER:
+		default:
+			break;
+	}
 }
 
 /*	================Our Fucntion=================== 1996.3
@@ -472,7 +476,7 @@ void boost_priorities()
 	while (i < levels){
 		while(!is_rlist_empty(schedArray[i])){
 			tmp = rlist_pop_front(schedArray[i]);
-      		tmp->tcb->priority -= 1;
+      		tmp->tcb->priority = 0;
       		rlist_push_back(schedArray[i-1],tmp);
 		}
 		i++;
