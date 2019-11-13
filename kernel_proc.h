@@ -73,7 +73,6 @@ typedef struct process_thread_control_block{
   PCB* pcb;                   /* The owner pcb of ptcb's thread */
   uint ref_count;             /* How many threads access the ptcb */
   TCB* tcb;                   /* The TCB of the thread */
-  Tid_t tid;                  /* The thread's id */
 
   rlnode thread_list_node;    /* The PTCB node */
   Task task;                  /* The task the thread is going to exec */

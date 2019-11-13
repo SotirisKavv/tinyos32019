@@ -448,11 +448,11 @@ void setPriority(enum SCHED_CAUSE cause)
 	switch(cause){
 		case SCHED_IO:
 		case SCHED_MUTEX:
-			if(CURTHREAD->priority > 0 && CURTHREAD != & CURCORE.idle_thread && CURTHREAD->state != READY)
+			if(CURTHREAD->priority > 0)
 				CURTHREAD->priority--;
 			break;
 		case SCHED_QUANTUM:
-			if(CURTHREAD->priority > 0 && CURTHREAD != & CURCORE.idle_thread && CURTHREAD->state != READY)
+			if(CURTHREAD->priority < levels-1)
 				CURTHREAD->priority++;
 			break;
 		case SCHED_PIPE:
@@ -462,6 +462,8 @@ void setPriority(enum SCHED_CAUSE cause)
 		default:
 			break;
 	}
+
+	if (CURTHREAD->last_cause == CURTHREAD->curr_cause) CURTHREAD->priority = 0;
 }
 
 /*	================Our Fucntion=================== 1996.3

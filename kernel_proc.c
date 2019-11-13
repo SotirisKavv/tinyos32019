@@ -74,24 +74,6 @@ void initialize_processes()
     FATAL("The scheduler process does not have pid==0");
 }
 
-//1996//
-PTCB* initialize_ptcb(PCB *pcb, Task task)
-{
- PTCB* ptcb = (PTCB*)malloc(sizeof(PTCB));
-  assert(ptcb);
-
-  ptcb->pcb = pcb;
-  ptcb->task = task;
-  ptcb->ref_count = 0;
-  ptcb->exited = 0;
-  ptcb->detached = 0;
-  ptcb->tid = 1;
-  ptcb->exit_cv = COND_INIT;
-
-  return ptcb;
-}
-
-
 /*
   Must be called with kernel_mutex held
 */
@@ -133,14 +115,11 @@ void release_PCB(PCB* pcb)
 */
 void start_main_thread()
 {
-
-  PTCB* ptcb = CURTHREAD->owner_ptcb;
-  assert(ptcb != NULL);
   int exitval;
 
-  Task call =  ptcb->task;
-  int argl = ptcb->argl;
-  void* args = ptcb->args;
+  Task call =  CURPROC->main_task;
+  int argl = CURPROC->argl;
+  void* args = CURPROC->args;
 
   exitval = call(argl,args);
   Exit(exitval);
@@ -204,9 +183,14 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     We changed the code so that the threads initialize through the ptcb 
   */
   //1996//
-  PTCB* ptcb = initialize_ptcb(newproc, call);
+  PTCB* ptcb = (PTCB*)malloc(sizeof(PTCB));
   assert(ptcb);
 
+  ptcb->task = call;
+  ptcb->ref_count = 0;
+  ptcb->exited = 0;
+  ptcb->detached = 0;
+  ptcb->exit_cv = COND_INIT;
   ptcb->argl = argl;
   if(args!=NULL) {
     ptcb->args = malloc(argl);
@@ -373,6 +357,10 @@ void sys_Exit(int exitval)
   /* Now, mark the process as exited. */
   curproc->pstate = ZOMBIE;
   curproc->exitval = exitval;
+
+  while(!is_rlist_empty(& curproc->ptcb_list)){
+    rlnode* node = rlist_pop_front(&curproc->ptcb_list);
+  }
 
   /* Bye-bye cruel world */
   kernel_sleep(EXITED, SCHED_USER);

@@ -947,7 +947,7 @@ BOOT_TEST(test_exit_many_threads,
 {
 
 	int task(int argl, void* args) {
-		fibo(45);
+		fibo(40);
 		return 2;
 	}
 
@@ -955,7 +955,7 @@ BOOT_TEST(test_exit_many_threads,
 		for(int i=0;i<5;i++)
 			ASSERT(CreateThread(task, 0, NULL) != NOTHREAD);
 
-		fibo(35);
+		fibo(30);
 		return 0;
 	}
 
