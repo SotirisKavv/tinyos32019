@@ -359,7 +359,7 @@ void sys_Exit(int exitval)
   curproc->exitval = exitval;
 
   while(!is_rlist_empty(& curproc->ptcb_list)){
-    rlnode* node = rlist_pop_front(&curproc->ptcb_list);
+    rlist_pop_front(&curproc->ptcb_list);
   }
 
   /* Bye-bye cruel world */

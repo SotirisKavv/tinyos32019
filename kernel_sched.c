@@ -191,7 +191,7 @@ CCB cctx[MAX_CORES];
 #define levels 10      /*1996*/
 
 rlnode *schedArray[levels]; /* The scheduler queue */
-rlnode SCHED[10];
+rlnode SCHED[levels];
 
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
@@ -409,7 +409,7 @@ void yield(enum SCHED_CAUSE cause)
 	//1996
 	setPriority(cause);
 
-	if (yield_calls>=50) {
+	if (yield_calls>=100) {
 		boost_priorities();
 		yield_calls = 0;
 	}
@@ -447,10 +447,10 @@ void setPriority(enum SCHED_CAUSE cause)
 {
 	switch(cause){
 		case SCHED_IO:
-		case SCHED_MUTEX:
 			if(CURTHREAD->priority > 0)
 				CURTHREAD->priority--;
 			break;
+		case SCHED_MUTEX:
 		case SCHED_QUANTUM:
 			if(CURTHREAD->priority < levels-1)
 				CURTHREAD->priority++;
@@ -462,8 +462,6 @@ void setPriority(enum SCHED_CAUSE cause)
 		default:
 			break;
 	}
-
-	if (CURTHREAD->last_cause == CURTHREAD->curr_cause) CURTHREAD->priority = 0;
 }
 
 /*	================Our Fucntion=================== 1996.3
@@ -478,7 +476,7 @@ void boost_priorities()
 	while (i < levels){
 		while(!is_rlist_empty(schedArray[i])){
 			tmp = rlist_pop_front(schedArray[i]);
-      		tmp->tcb->priority = 0;
+      		tmp->tcb->priority = tmp->tcb->priority - 1;
       		rlist_push_back(schedArray[i-1],tmp);
 		}
 		i++;
