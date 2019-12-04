@@ -78,6 +78,7 @@ int pipe_read(void* this, char* buff, unsigned int size){
 
 		buff[count] = pipecb->buffer[pipecb->r];
 		pipecb->r = (pipecb->r + 1) % BUF_SIZE;
+		pipecb->full = 0;
 
 		count++;
 	}
@@ -86,7 +87,37 @@ int pipe_read(void* this, char* buff, unsigned int size){
 }
 
 int pipe_write(void* this, const char* buff, unsigned int size){
-	return 12;
+	
+	pipe_CB* pipecb = (pipe_CB*) this;
+
+	if (pipecb->writer == NULL || pipecb->reader == NULL || pipecb == NULL)
+	{
+		return -1;
+	}
+
+	int count = 0;
+	while(count < size){
+
+		if (pipecb->w + 1 == pipecb->r && pipecb->reader == NULL && !pipecb->full)
+		{
+			return count;
+		}
+
+		while(pipecb->r == pipecb->w && pipecb->full){
+			kernel_broadcast(& pipecb->hasSpace);
+			kernel_wait(& pipecb->hasData, SCHED_PIPE);
+		}
+
+		if (pipecb->r == pipecb->w)
+			pipecb->full = 1;
+
+		pipecb->buffer[pipecb->w] = buff[count];
+		pipecb->w = (pipecb->w + 1) % BUF_SIZE;
+
+		count++;
+	}
+
+	return count;
 }
 
 int pipe_close_reader(void* this){
@@ -110,5 +141,21 @@ int pipe_close_reader(void* this){
 }
 
 int pipe_close_writer(void* this){
-	return -1;
+	
+	pipe_CB* pipecb = (pipe_CB*) this;
+	
+	if (pipecb == NULL)
+	{
+		return -1;
+	}
+
+	pipecb->writer = NULL;
+	kernel_broadcast(& pipecb->hasSpace);
+
+	if (pipecb->reader == NULL)
+	{
+		free(pipecb);
+	}
+
+	return 0;
 }
