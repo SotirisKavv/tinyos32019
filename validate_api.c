@@ -10,6 +10,7 @@
 #include "symposium.h"
 #include "tinyoslib.h"
 #include "unit_testing.h"
+#include "kernel_socket.h"
 
 
 /*
@@ -1285,8 +1286,12 @@ BOOT_TEST(test_socket_constructor_illegal_port,
 BOOT_TEST(test_listen_success,
 	"Test that Listen succeeds on an unbound socket"
 	)
-{
-	ASSERT(Listen(Socket(100))==0);
+{	
+	Fid_t fid = Socket(100);
+
+	printf("%d\n", fid);
+
+	ASSERT(Listen(fid)==0);
 	return 0;
 }
 

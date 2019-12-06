@@ -1,10 +1,24 @@
 #include "kernel_streams.h"
 #include "kernel_dev.h"
+#include "kernel_proc.h"
 #include "tinyos.h"
 #include "kernel_cc.h"
 #include "util.h"
 #include "kernel_socket.h"
 #include "tinyos.h"
+
+socket_CB *PORT_MAP[MAX_PORT+1] = {NULL};
+
+socket_CB* getSCB(Fid_t sock){
+
+	if(get_fcb(sock) == NULL){
+		return NULL;
+	}
+
+	FCB* fcb = get_fcb(sock);
+	
+	return (socket_CB*) fcb->streamobj;
+}
 
 static file_ops socketOperations = {
 	.Open = NULL,
@@ -92,35 +106,50 @@ Fid_t sys_Socket(port_t port)
 		return NOFILE;
 	}
 
-	FCB* fcb;
-	Fid_t fid;
+	socket_CB* socketcb = (socket_CB*)malloc(sizeof(socket_CB));
+	assert(socketcb);
 
-	if (FCB_reserve(1, &fid, &fcb)==0)
+	if (FCB_reserve(1, & socketcb->fid, & socketcb->fcb)==0)
 	{
 		return NOFILE;
 	}
 
-	socket_CB* socketcb = (socket_CB*)malloc(sizeof(socket_CB));
-	assert(socketcb);
-
 	socketcb->refcount = 0;
-	socketcb->fcb = fcb;
-	socketcb->fid = fid;
 	socketcb->type = UNBOUND;
 	socketcb->port = port;
 	
-	fcb->streamobj = socketcb;
-	fcb->streamfunc = &socketOperations;
+	socketcb->fcb->streamobj = socketcb;
+	socketcb->fcb->streamfunc = &socketOperations;
 
 	socketcb->refcount++;
-
-	return fid;
+	return socketcb->fid;
 }
 
 int sys_Listen(Fid_t sock)
 {
-	return -1;
+	socket_CB* socket = getSCB(sock);
+
+
+	if (socket == NULL || socket->port <= NOPORT || socket->port > MAX_PORT ||
+		PORT_MAP[socket->port] != NULL || socket->type != UNBOUND)
+	{
+		return -1;
+	}
+
+	PORT_MAP[socket->port] = socket;
+
+	
+
+	/* Initialiaze the Listener */
+	socket->type = LISTENER;
+	socket->socket_properties.listener->req_available = COND_INIT;
+	rlnode_init(&socket->socket_properties.listener->request_queue, NULL);
+
+	PORT_MAP[socket->port] = socket;
+
+	return 0;
 }
+
 
 
 Fid_t sys_Accept(Fid_t lsock)

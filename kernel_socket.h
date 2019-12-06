@@ -35,8 +35,6 @@ typedef struct socket_control_block{
 
 } socket_CB;
 
-socket_CB *PORT_MAP[MAX_PORT+1];
-
 typedef struct listener_socket
 {
 	rlnode request_queue;
