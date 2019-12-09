@@ -13,7 +13,6 @@ typedef enum {
 
 typedef struct listener_socket listSocket;
 typedef struct peer_socket peerSocket;
-typedef struct unbound_socket unboundSocket;
 
 /**
   @brief Socket Control Block.
@@ -30,7 +29,6 @@ typedef struct socket_control_block{
 	union{
 		listSocket* listener;
 		peerSocket* peer;
-		unboundSocket* unbound;
 	}socket_properties;
 
 } socket_CB;

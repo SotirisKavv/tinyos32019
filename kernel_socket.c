@@ -129,19 +129,16 @@ int sys_Listen(Fid_t sock)
 {
 	socket_CB* socket = getSCB(sock);
 
-
 	if (socket == NULL || socket->port <= NOPORT || socket->port > MAX_PORT ||
 		PORT_MAP[socket->port] != NULL || socket->type != UNBOUND)
 	{
 		return -1;
 	}
 
-	PORT_MAP[socket->port] = socket;
-
-	
-
 	/* Initialiaze the Listener */
 	socket->type = LISTENER;
+	socket->socket_properties.listener = (listSocket*)malloc(sizeof(listSocket));
+	assert(socket->socket_properties.listener);
 	socket->socket_properties.listener->req_available = COND_INIT;
 	rlnode_init(&socket->socket_properties.listener->request_queue, NULL);
 
@@ -151,7 +148,6 @@ int sys_Listen(Fid_t sock)
 }
 
 
-
 Fid_t sys_Accept(Fid_t lsock)
 {
 	return NOFILE;
@@ -159,9 +155,43 @@ Fid_t sys_Accept(Fid_t lsock)
 
 
 int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
-{
-	return -1;
+{	
+	socket_CB* peer = getSCB(sock);
+
+	if (peer == NULL || peer->port <= NOPORT || peer->port > MAX_PORT ||
+		PORT_MAP[peer->port] != NULL || peer->type != UNBOUND)
+	{
+		return -1;
+	}
+
+	if (port <= NOPORT || port > MAX_PORT)
+		return -1;
+
+	socket_CB* listener = PORT_MAP[port];
+
+	if (listener == NULL)
+		return -1;
+
+	RCB* requectCB = (RCB*)malloc(sizeof(RCB));
+	assert(requectCB);
+	requectCB->socket_req = peer;
+	requectCB->accept_socket = COND_INIT;
+	requectCB->served = 0;
+	requectCB->active = 1;
+
+	rlist_push_back(& listener->socket_properties.listener->request_queue, rlnode_init(& requectCB->node, requectCB));
+
+	kernel_broadcast(& listener->socket_properties.listener->req_available);
+	kernel_timedwait(& requectCB->accept_socket, SCHED_USER, timeout);
+
+	if (!requectCB->served || !requectCB->active )
+		return -1;
+
+	free(requectCB);
+
+	return 0;
 }
+
 
 
 int sys_ShutDown(Fid_t sock, shutdown_mode how)

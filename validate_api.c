@@ -1287,11 +1287,7 @@ BOOT_TEST(test_listen_success,
 	"Test that Listen succeeds on an unbound socket"
 	)
 {	
-	Fid_t fid = Socket(100);
-
-	printf("%d\n", fid);
-
-	ASSERT(Listen(fid)==0);
+	ASSERT(Listen(Socket(100))==0);
 	return 0;
 }
 
