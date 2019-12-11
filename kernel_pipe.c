@@ -17,6 +17,19 @@ static file_ops writeOperations = {
 	.Close = pipe_close_writer
 };
 
+pipe_CB* pipe_init(){
+	
+	pipe_CB* pipecb = (pipe_CB*)xmalloc(sizeof(pipe_CB));
+	assert(pipecb);
+
+	pipecb->r = pipecb->w = 0;
+	pipecb->full = 0;
+
+	pipecb->hasSpace = COND_INIT;
+	pipecb->hasData = COND_INIT;
+
+	return pipecb;
+}
 
 
 int sys_Pipe(pipe_t* pipe)

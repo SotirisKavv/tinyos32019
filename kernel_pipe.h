@@ -24,3 +24,5 @@ int pipe_write(void* this, const char* buffer, unsigned int size);
 int pipe_close_reader(void* this);
 
 int pipe_close_writer(void* this);
+
+pipe_CB* pipe_init();
