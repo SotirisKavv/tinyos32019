@@ -69,7 +69,7 @@ int socket_close(void* this){
 
 	socket_CB* socketcb = (socket_CB*) this;
 	
-	if (socket_CB == NULL)
+	if (socketcb == NULL)
 	{
 		return -1;
 	}
@@ -86,18 +86,15 @@ int socket_close(void* this){
 				socketcb->socket_properties.peer->peer->socket_properties.peer->peer = NULL;
 				socketcb->socket_properties.peer->peer->refcount--;
 			}
+			free(socketcb->socket_properties.peer);
 			break;
 		case LISTENER:
-
-			PORT_MAP[port] = NULL;
-
+			PORT_MAP[socketcb->port] = NULL;
 			while(!is_rlist_empty(& socketcb->socket_properties.listener->request_queue)){
 				rlnode* temp = rlist_pop_front(& socketcb->socket_properties.listener->request_queue);
-				temp->rcb->active = 0;
+				kernel_broadcast(& temp->rcb->accept_socket);
 			}
-
-			kernel_broadcast(& socketcb->socket_properties.listener->req_available);
-
+			free(socketcb->socket_properties.listener);			
 			break;
 		default:
 			break;
@@ -105,10 +102,7 @@ int socket_close(void* this){
 
 	socketcb->refcount--;
 
-	if (socketcb->refcount <= 0 && socketcb != NULL)
-	{
-		free(socketcb);
-	}
+	free(socketcb);
 
 	return 0;
 }
@@ -274,16 +268,13 @@ int sys_ShutDown(Fid_t sock, shutdown_mode how)
 		return -1;
 	}
 
-	pipe_CB* pipe = NULL;
 	int control = -1;
 	switch(how){
 		case SHUTDOWN_READ:
-			pipe = socket->socket_properties.peer->recv_pipe;
-			control = pipe_close_writer(pipe_read);
+			control = pipe_close_reader(socket->socket_properties.peer->recv_pipe);
 			break;
 		case SHUTDOWN_WRITE:
-			pipe = socket->socket_properties.peer->send_pipe;
-			control = pipe_close_writer(pipe_write);
+			control = pipe_close_writer(socket->socket_properties.peer->send_pipe);
 			break;
 		case SHUTDOWN_BOTH:
 			control = socket_close(socket);
